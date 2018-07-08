@@ -5,17 +5,30 @@
 
 /* Librairies */
 #include <Wire.h>
+#include <FastLED.h>
 #include <Adafruit_MMA8451.h>
 #include <Adafruit_Sensor.h>
 #include "Joystick.h"
 
 /* Variables definition */
+//Nudge detection
 #define MMA8451_DEFAULT_ADDRESS 0x1C
 Adafruit_MMA8451 mma = Adafruit_MMA8451();
 #define SENSIBILITY_NUDGE 100
 #define SENSIBILITY_WAIT_TIME 500
 #define SENSIBILITY_NUDGE_MAX_X 512
 #define SENSIBILITY_NUDGE_MAX_Y 512
+
+//leds plunger effects 
+#define LED_PIN     2
+#define NUM_LEDS    15
+#define BRIGHTNESS  200
+#define LED_TYPE    WS2812
+#define COLOR_ORDER RGB
+CRGB leds[NUM_LEDS];
+CRGBPalette16 currentPalette;
+TBlendType    currentBlending;
+int colorIndex = 1;
 
 // Create Joystick
 Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_GAMEPAD,
@@ -25,6 +38,7 @@ Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_GAMEPAD,
   false, false,          // No rudder or throttle
   false, false, false);  // No accelerator, brake, or steering
 
+//nudge
 int init_x_val = 0;
 int init_y_val = 0;
 int last_x_val = 0;
@@ -32,6 +46,8 @@ int last_y_val = 0;
 unsigned long time_x;
 unsigned long time_y;
 int update_x=1, update_y=1;
+
+//plunger
 int PlungerVal = 0;
 int analogPin = 0;
 
@@ -59,13 +75,17 @@ void setup(void) {
   time_y = millis();
 
 /* Joystick Setup */
-
   Joystick.begin();
   // Set Range Values
   Joystick.setXAxisRange(-127, 127);
   Joystick.setYAxisRange(-127, 127);
   Joystick.setZAxisRange(0, 1023);
-  
+
+/* Plunger leds effects */
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+  FastLED.setBrightness(  BRIGHTNESS );
+  currentPalette = RainbowColors_p;
+  currentBlending = LINEARBLEND;
 }
 
 
@@ -129,6 +149,13 @@ update_y=0;
 PlungerVal = analogRead(analogPin);
 Joystick.setZAxis(PlungerVal);
 
+/* plunger leds effects */
 
-delay(50);
+for( int i = 0; i < NUM_LEDS; i++) {
+        leds[i] = ColorFromPalette( currentPalette, colorIndex, BRIGHTNESS, currentBlending);
+        colorIndex += 3;
+    }
+FastLED.show();
+    
+delay(10);
 }
